@@ -1,8 +1,3 @@
-# KidsCanCode - Game Development with Pygame video series
-# Jumpy! (a platform game) - Part 1
-# Video link: https://www.youtube.com/watch?v=uWvb3QzA48c
-# Project setup
-
 import pygame as pg
 import random
 from settings import *
@@ -21,12 +16,13 @@ class Game:
     def new(self):
         # start a new game
         self.all_sprites = pg.sprite.Group()
-        self.player = Player()
-        self.platforms = pg.sprite.Group()
+        self.player = Player(self)
+        self.platinums = pg.sprite.Group()
         self.all_sprites.add(self.player)
-        p1 = Platform(0, HEIGHT-40, WIDTH, 40)
-        self.all_sprites.add(p1)
-        self.platforms.add(p1)
+        for plat in PLATINUM_LIST:
+            p = Platinum(*plat)
+            self.all_sprites.add(p)
+            self.platinums.add(p)
         self.run()
 
     def run(self):
@@ -41,11 +37,22 @@ class Game:
     def update(self):
         # Game Loop - Update
         self.all_sprites.update()
-        hits = scollide(self.player, self.platforms, False)
-        if hits:
-           self.player.pos.y = hits[0].rect.top
-           self.player.vel.y = 0
-
+        if self.player.vel.y > 0:
+            hits = scollide(self.player, self.platinums, False)
+            if hits:
+                self.player.pos.y = hits[0].rect.top
+                self.player.vel.y = 0
+        if self.player.rect.top <= HEIGHT/4:
+            self.player.pos.y += abs(self.player.vel.y)
+            for plat in self.platinums:
+                plat.rect.y += (self.player.vel.y*-1)
+                if plat.rect.top >= HEIGHT:
+                    plat.kill()
+        while len(self.platinums) < 6:
+            width = random.randrange(50, 100)
+            p = Platinum(random.randrange(0, WIDTH-width), random.randrange(-75, -30), width, 20)
+            self.platinums.add(p)
+            self.all_sprites.add(p)
     def events(self):
         # Game Loop - events
         for event in pg.event.get():
@@ -54,7 +61,9 @@ class Game:
                 if self.playing:
                     self.playing = False
                 self.running = False
-
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE:
+                    self.player.jump()
     def draw(self):
         # Game Loop - draw
         self.screen.fill(BLACK)
